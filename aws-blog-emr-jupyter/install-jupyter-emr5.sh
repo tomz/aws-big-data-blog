@@ -85,8 +85,9 @@ JUPYTER_HUB_DEFAULT_USER="jupyter"
 INTERPRETERS="Scala,SQL,PySpark,SparkR"
 R_REPOS_LOCAL="file:////mnt/miniCRAN"
 R_REPOS_REMOTE="http://cran.rstudio.com"
-R_REPOS=$R_REPOS_LOCAL
-USE_CACHED_DEPS=true
+R_REPOS=$R_REPOS_REMOTE
+#R_REPOS=$R_REPOS_LOCAL
+USE_CACHED_DEPS=false
 SSL=false
 SSL_OPTS="--no-ssl"
 COPY_SAMPES=false
@@ -186,8 +187,8 @@ while [ $# -gt 0 ]; do
       INTERPRETERS=$1
       ;;
     --cached-install)
-      USE_CACHED_DEPS=true
-      R_REPOS=$R_REPOS_LOCAL
+      #USE_CACHED_DEPS=true
+      #R_REPOS=$R_REPOS_LOCAL
       ;;
     --no-cached-install)
       USE_CACHED_DEPS=false
