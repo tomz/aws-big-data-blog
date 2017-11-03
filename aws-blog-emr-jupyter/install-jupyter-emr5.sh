@@ -292,7 +292,7 @@ fi
 
 export NODE_PATH='/usr/lib/node_modules'
 if [ "$JS_KERNEL" = true ]; then
-  sudo python -m pip install -U jinja2 tornado jsonschema pyzmq
+  sudo python -m pip install jinja2 tornado jsonschema pyzmq
   sudo npm cache clean -f
   sudo npm install -g npm
   sudo npm install -g n
@@ -312,23 +312,23 @@ fi
 TF_BINARY_URL_PY3="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.1.0-cp34-cp34m-linux_x86_64.whl"
 TF_BINARY_URL="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.1.0-cp27-none-linux_x86_64.whl"
 
-sudo python3 -m pip install -U jupyter
+sudo python3 -m pip install jupyter
 sudo ln -sf /usr/local/bin/ipython /usr/bin/
 sudo ln -sf /usr/local/bin/jupyter /usr/bin/
 if [ "$INSTALL_PY3_PKGS" = true ]; then
-  sudo python3 -m pip install -U matplotlib seaborn bokeh cython networkx findspark
-  sudo python3 -m pip install -U mrjob pyhive sasl thrift thrift-sasl snakebite
+  sudo python3 -m pip install matplotlib seaborn bokeh cython networkx findspark
+  sudo python3 -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite
 else
-  sudo python -m pip install -U matplotlib seaborn bokeh cython networkx findspark
-  sudo python -m pip install -U mrjob pyhive sasl thrift thrift-sasl snakebite
+  sudo python -m pip install matplotlib seaborn bokeh cython networkx findspark
+  sudo python -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite
 fi
 
 if [ "$DS_PACKAGES" = true ]; then
   # Python
   if [ "$INSTALL_PY3_PKGS" = true ]; then
-    sudo python3 -m pip install -U scikit-learn pandas numpy numexpr statsmodels scipy
+    sudo python3 -m pip install scikit-learn pandas numpy numexpr statsmodels scipy
   else
-    sudo python -m pip install -U scikit-learn pandas numpy numexpr statsmodels scipy    
+    sudo python -m pip install scikit-learn pandas numpy numexpr statsmodels scipy    
   fi
   # Javascript
   if [ "$JS_KERNEL" = true ]; then
@@ -338,21 +338,25 @@ fi
 
 if [ "$ML_PACKAGES" = true ]; then
   if [ "$INSTALL_PY3_PKGS" = true ]; then
-    sudo python3 -m pip install -U theano
-    sudo python3 -m pip install -U keras
-    sudo python3 -m pip install -U $TF_BINARY_URL_PY3
+    sudo python3 -m pip install mxnet==0.11.0
+    sudo python3 -m pip install $TF_BINARY_URL_PY3
+    sudo python3 -m pip install theano
+    sudo python3 -m pip install keras
+    sudo python3 -m pip install xgboost lightgbm opencv-python
   else
-    sudo python -m pip install -U theano
-    sudo python -m pip install -U keras
-    sudo python -m pip install -U $TF_BINARY_URL
+    sudo python -m pip install mxnet==0.11.0
+    sudo python -m pip install $TF_BINARY_URL
+    sudo python -m pip install theano
+    sudo python -m pip install keras
+    sudo python -m pip install xgboost lightgbm opencv-python
   fi
 fi
 
 if [ ! "$PYTHON_PACKAGES" = "" ]; then
   if [ "$INSTALL_PY3_PKGS" = true ]; then
-    sudo python3 -m pip install -U $PYTHON_PACKAGES || true
+    sudo python3 -m pip install $PYTHON_PACKAGES || true
   else
-    sudo python -m pip install -U $PYTHON_PACKAGES || true
+    sudo python -m pip install $PYTHON_PACKAGES || true
   fi
 fi
 
@@ -389,9 +393,9 @@ fi
 
 if [ "$INSTALL_DASK" = true ]; then
   if [ "$INSTALL_PY3_PKGS" = true ]; then
-    sudo python3 -m pip install -U dask[complete] distributed
+    sudo python3 -m pip install dask[complete] distributed
   else
-    sudo python -m pip install -U dask[complete] distributed
+    sudo python -m pip install dask[complete] distributed
   fi
   export PATH=$PATH:/usr/local/bin
   if [ "$IS_MASTER" = true ]; then
@@ -468,14 +472,14 @@ if [ "$SSL" = true ]; then
 fi
 
 # install default kernels
-sudo python3 -m pip install -U notebook ipykernel
+sudo python3 -m pip install notebook ipykernel
 sudo python3 -m ipykernel install
-sudo python -m pip install -U notebook ipykernel
+sudo python -m pip install notebook ipykernel
 sudo python -m ipykernel install
-sudo python3 -m pip install -U metakernel
-#sudo python3 -m pip install -U gnuplot_kernel
+sudo python3 -m pip install metakernel
+#sudo python3 -m pip install gnuplot_kernel
 #sudo python3 -m gnuplot_kernel install
-sudo python3 -m pip install -U bash_kernel
+sudo python3 -m pip install bash_kernel
 sudo python3 -m bash_kernel.install
 
 # Javascript/CoffeeScript kernels
@@ -484,21 +488,21 @@ if [ "$JS_KERNEL" = true ]; then
   sudo ijs --ijs-install=global
   sudo jp-coffee --jp-install=global
 fi
-sudo python3 -m pip install -U jupyter_contrib_nbextensions
-sudo python -m pip install -U jupyter_contrib_nbextensions
+sudo python3 -m pip install jupyter_contrib_nbextensions
+sudo python -m pip install jupyter_contrib_nbextensions
 sudo jupyter contrib nbextension install --system
-sudo python3 -m pip install -U jupyter_nbextensions_configurator
-sudo python -m pip install -U jupyter_nbextensions_configurator
+sudo python3 -m pip install jupyter_nbextensions_configurator
+sudo python -m pip install jupyter_nbextensions_configurator
 sudo jupyter nbextensions_configurator enable --system
-sudo python3 -m pip install -U ipywidgets
-sudo python -m pip install -U ipywidgets
+sudo python3 -m pip install ipywidgets
+sudo python -m pip install ipywidgets
 sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
 
-sudo python3 -m pip install -U pyeda # only work for python3
-sudo python -m pip install -U gvmagic py_d3
+sudo python3 -m pip install pyeda # only work for python3
+sudo python -m pip install gvmagic py_d3
 aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/rpy2-2.8.6.tar.gz /mnt/
 sudo python -m pip install /mnt/rpy2-2.8.6.tar.gz
-sudo python -m pip install -U ipython-sql
+sudo python -m pip install ipython-sql
 
 if [ "$JULIA_KERNEL" = true ]; then
   julia -e 'Pkg.add("IJulia")'
@@ -574,10 +578,10 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
         git clone https://github.com/tomz/s3nb.git
       fi
       cd s3nb
-      sudo python -m pip install -U entrypoints
+      sudo python -m pip install entrypoints
       sudo python setup.py install
       if [ "$JUPYTER_HUB" = true ]; then
-        sudo python3 -m pip install -U entrypoints
+        sudo python3 -m pip install entrypoints
         sudo python3 setup.py install
       fi
 
@@ -591,7 +595,7 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
     elif [ "$NOTEBOOK_DIR_S3_S3CONTENTS" = true ]; then
       BUCKET=$(ruby -e "puts '$NOTEBOOK_DIR'.split('//')[1].split('/')[0]")
       FOLDER=$(ruby -e "puts '$NOTEBOOK_DIR'.split('//')[1].split('/')[1..-1].join('/')")
-      #sudo python -m pip install -U s3contents
+      #sudo python -m pip install s3contents
       cd /mnt
       #aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/s3contents.zip .
       #unzip s3contents.zip
@@ -905,6 +909,7 @@ if [ "$JUPYTER_HUB" = true ]; then
   if [ ! "$JUPYTER_HUB_DEFAULT_USER" = "" ]; then
     create_hdfs_user &
   fi
+
   # change the password of the hadoop user to JUPYTER_PASSWORD
   if [ ! "$JUPYTER_PASSWORD" = "" ]; then
     sudo sh -c "echo '$JUPYTER_PASSWORD' | passwd $JUPYTER_HUB_DEFAULT_USER --stdin"
