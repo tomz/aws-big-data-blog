@@ -16,6 +16,7 @@ set -x -e
 # 2017-05-23 - Tom Zeng, fix the s3contents dummy last_modified field
 # 2017-05-25 - Tom Zeng, turn off tensorflow, pip wheel install no longer working, will fix later
 # 2017-06-09 - Tom Zeng, fix install issue for EMR 5.6 caused by kernel source package already installed
+# 2017-11-29 - Tom Zeng, fix the broken JavaScript and CoffeeScript kernels, now works on EMR 5.10
 
 #
 # Usage:
@@ -85,9 +86,8 @@ JUPYTER_HUB_DEFAULT_USER="jupyter"
 INTERPRETERS="Scala,SQL,PySpark,SparkR"
 R_REPOS_LOCAL="file:////mnt/miniCRAN"
 R_REPOS_REMOTE="http://cran.rstudio.com"
-R_REPOS=$R_REPOS_REMOTE
-#R_REPOS=$R_REPOS_LOCAL
 USE_CACHED_DEPS=false
+R_REPOS=$R_REPOS_REMOTE
 SSL=false
 SSL_OPTS="--no-ssl"
 COPY_SAMPES=false
@@ -102,6 +102,7 @@ APACHE_SPARK_VERSION="2.2.0"
 BIGDL=false
 MXNET=false
 DL4J=false
+NPROC=$(nproc)
 
 # get input parameters
 while [ $# -gt 0 ]; do
@@ -277,7 +278,7 @@ if [ ! -d /mnt/usr-moved ]; then
   date >> /tmp/install_time.log
 fi
 
-export MAKE='make -j 8'
+export MAKE="make -j $NPROC"
 
 sudo yum remove -y kernel-4.9.27-14.31.amzn1.x86_64 # EMR 5.6
 if [ "$USE_CACHED_DEPS" = true ]; then
@@ -291,27 +292,36 @@ else
   sudo yum install -y bzip2 autoconf automake libtool bison iconv-devel sqlite-devel
 fi
 
-export NODE_PATH='/usr/lib/node_modules'
-if [ "$JS_KERNEL" = true ]; then
-  sudo python -m pip install jinja2 tornado jsonschema pyzmq
-  sudo npm cache clean -f
-  sudo npm install -g npm
-  sudo npm install -g n
-  sudo n stable
-fi
-
 cd /mnt
 PYTHON3=false
 if [ "$PYTHON3" = true ]; then # this will break bigtop/puppet which relies on python 2, so disable with the line above
   export PYSPARK_PYTHON="python3"
-  sudo ln -sf /usr/bin/python3.4 /usr/bin/python
-  sudo ln -sf /usr/bin/pip-3.4 /usr/bin/pip
+  sudo python3 -m pip install --upgrade pip
+  if [ -f /usr/bin/python3.4 ]; then
+    sudo ln -sf /usr/bin/python3.4 /usr/bin/python
+  fi
+  if [ -f /usr/bin/pip-3.4 ]; then
+    sudo ln -sf /usr/bin/pip-3.4 /usr/bin/pip
+  fi
 else
   sudo python -m pip install --upgrade pip
-  sudo ln -sf /usr/local/bin/pip2.7 /usr/bin/pip
+  if [ -f /usr/bin/pip-2.7 ]; then
+    sudo ln -sf /usr/bin/pip-2.7 /usr/bin/pip
+  fi
 fi
-TF_BINARY_URL_PY3="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.1.0-cp34-cp34m-linux_x86_64.whl"
-TF_BINARY_URL="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.1.0-cp27-none-linux_x86_64.whl"
+
+export NODE_PATH='/usr/lib/node_modules'
+if [ "$JS_KERNEL" = true ]; then
+  sudo python -m pip install jinja2 tornado jsonschema pyzmq
+  # the following no longer working or needed on the latest EMR version 5.10
+  #sudo npm cache clean -f
+  #sudo npm install -g npm
+  #sudo npm install -g n
+  #sudo n stable
+fi
+
+TF_BINARY_URL_PY3="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.4.0-cp34-cp34m-linux_x86_64.whl"
+TF_BINARY_URL="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.4.0-cp27-none-linux_x86_64.whl"
 
 sudo python3 -m pip install jupyter
 sudo ln -sf /usr/local/bin/ipython /usr/bin/
@@ -371,8 +381,8 @@ if [ "$BIGDL" = true ]; then
   cd BigDL/
   export MAVEN_OPTS="-Xmx2g -XX:ReservedCodeCacheSize=512m"
   export BIGDL_HOME=/mnt/BigDL
-  export BIGDL_VER="0.2.0-SNAPSHOT"
-  bash make-dist.sh -P spark_2.1
+  export BIGDL_VER="0.4.0-SNAPSHOT"
+  bash make-dist.sh -P spark_2.2
   mkdir /tmp/bigdl_summaries
   /usr/local/bin/tensorboard --debug INFO --logdir /tmp/bigdl_summaries/ > /tmp/tensorboard_bigdl.log 2>&1 &
 fi
@@ -383,8 +393,11 @@ if [ "$JULIA_KERNEL" = true ]; then
   if [ ! "$USE_CACHED_DEPS" = true ]; then
     wget https://julialang.s3.amazonaws.com/bin/linux/x64/0.5/julia-0.5.0-linux-x86_64.tar.gz
     tar xvfz julia-0.5.0-linux-x86_64.tar.gz
+    #wget https://julialang-s3.julialang.org/bin/linux/x64/0.6/julia-0.6.1-linux-x86_64.tar.gz
+    #tar xvfz julia-0.6.1-linux-x86_64.tar.gz
   fi
   cd julia-3c9d75391c
+  #cd julia-0d7248e2ff
   sudo cp -pr bin/* /usr/bin/
   sudo cp -pr lib/* /usr/lib/
   #sudo cp -pr libexec/* /usr/libexec/
@@ -421,7 +434,7 @@ if [ "$RUBY_KERNEL" = true ]; then
   fi
   cd ruby-2.1.8
   ./configure --prefix=/usr
-  make
+  make -j $NPROC
   sudo make install
   #sudo gem install puppet -v=3.7.4 -N
   sudo gem install rbczmq iruby -N
@@ -546,7 +559,7 @@ fi
 
 if [ "$R_KERNEL" = true ] || [ "$TOREE_KERNEL" = true ]; then
   if [ ! -f /tmp/Renvextra ]; then # check if the rstudio ba was run, it does this already 
-   sudo sed -i 's/make/make -j 8/g' /usr/lib64/R/etc/Renviron
+   sudo sed -i "s/make/make -j $NPROC/g" /usr/lib64/R/etc/Renviron
   fi
 
   sudo R --no-save << R_SCRIPT
@@ -620,7 +633,7 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
       ls -alrt
       ./autogen.sh
       ./configure
-      make
+      make -j $NPROC
       sudo make install
       sudo su -c 'echo user_allow_other >> /etc/fuse.conf'
       mkdir -p /mnt/s3fs-cache
@@ -664,8 +677,7 @@ fi
 
 
 wait_for_spark() {
-  # wait SparkR file to show up
-  while [ ! -f /etc/spark/conf/spark-defaults.conf ]
+  while [ ! -f /var/run/spark/spark-history-server.pid ]
   do
     sleep 10
   done
@@ -871,7 +883,7 @@ if [ "$TOREE_KERNEL" = true ]; then
   cd incubator-toree/
   git pull
   export APACHE_SPARK_VERSION=$APACHE_SPARK_VERSION
-  make -j8 dist 
+  make -j $NPROC dist 
   make clean release APACHE_SPARK_VERSION=$APACHE_SPARK_VERSION || true # gettting the docker not running error, swallow it with || true
   if [ "$RUN_AS_STEP" = true ]; then
     background_install_proc
@@ -910,7 +922,6 @@ if [ "$JUPYTER_HUB" = true ]; then
   if [ ! "$JUPYTER_HUB_DEFAULT_USER" = "" ]; then
     create_hdfs_user &
   fi
-
   # change the password of the hadoop user to JUPYTER_PASSWORD
   if [ ! "$JUPYTER_PASSWORD" = "" ]; then
     sudo sh -c "echo '$JUPYTER_PASSWORD' | passwd $JUPYTER_HUB_DEFAULT_USER --stdin"
