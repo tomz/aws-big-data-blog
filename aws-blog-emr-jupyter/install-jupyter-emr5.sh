@@ -17,6 +17,11 @@ set -x -e
 # 2017-05-25 - Tom Zeng, turn off tensorflow, pip wheel install no longer working, will fix later
 # 2017-06-09 - Tom Zeng, fix install issue for EMR 5.6 caused by kernel source package already installed
 # 2017-11-29 - Tom Zeng, fix the broken JavaScript and CoffeeScript kernels, now works on EMR 5.10
+# 2018-03-02 - Tom Zeng, fix the python package (six) conflict for 'sudo jupyter contrib nbextension install --system'
+# 2018-03-06 - Tom Zeng, fix the latest tornado (5.0) and asyncio package conflict by using tornadio 4.5.3
+# 2018-03-08 - Tom Zeng, upgrade Julia from 0.5 to 0.6.2, upgrade MXNet to the latest available version, upgrade Ruby to 2.5.0
+# 2018-03-09 - Tom Zeng, upgrade TensorFlow to 1.6, add SageMaker to --ml-packages
+
 
 #
 # Usage:
@@ -103,6 +108,7 @@ BIGDL=false
 MXNET=false
 DL4J=false
 NPROC=$(nproc)
+UPDATE_FLAG=""
 
 # get input parameters
 while [ $# -gt 0 ]; do
@@ -200,6 +206,9 @@ while [ $# -gt 0 ]; do
       ;;
     --ssl)
       SSL=true
+      ;;
+    --update-python-packages)
+      UPDATE_FLAG="-U"
       ;;
     --dask)
       INSTALL_DASK=true
@@ -320,8 +329,8 @@ if [ "$JS_KERNEL" = true ]; then
   #sudo n stable
 fi
 
-TF_BINARY_URL_PY3="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.4.0-cp34-cp34m-linux_x86_64.whl"
-TF_BINARY_URL="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.4.0-cp27-none-linux_x86_64.whl"
+TF_BINARY_URL_PY3="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.6.0-cp34-cp34m-linux_x86_64.whl"
+TF_BINARY_URL="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.6.0-cp27-none-linux_x86_64.whl"
 
 sudo python3 -m pip install jupyter
 sudo ln -sf /usr/local/bin/ipython /usr/bin/
@@ -349,17 +358,19 @@ fi
 
 if [ "$ML_PACKAGES" = true ]; then
   if [ "$INSTALL_PY3_PKGS" = true ]; then
-    sudo python3 -m pip install mxnet==0.11.0
+    sudo python3 -m pip install mxnet sagemaker
     sudo python3 -m pip install $TF_BINARY_URL_PY3
     sudo python3 -m pip install theano
     sudo python3 -m pip install keras
     sudo python3 -m pip install xgboost lightgbm opencv-python
+    #sudo python3 -m pip install pytorch # pytorch taking too long to setup, skip it for now
   else
-    sudo python -m pip install mxnet==0.11.0
+    sudo python -m pip install mxnet sagemaker
     sudo python -m pip install $TF_BINARY_URL
     sudo python -m pip install theano
     sudo python -m pip install keras
     sudo python -m pip install xgboost lightgbm opencv-python
+    #sudo python3 -m pip install pytorch # pytorch taking too long to setup, skip it for now
   fi
 fi
 
@@ -391,13 +402,17 @@ if [ "$JULIA_KERNEL" = true ]; then
   # Julia install
   cd /mnt
   if [ ! "$USE_CACHED_DEPS" = true ]; then
-    wget https://julialang.s3.amazonaws.com/bin/linux/x64/0.5/julia-0.5.0-linux-x86_64.tar.gz
-    tar xvfz julia-0.5.0-linux-x86_64.tar.gz
-    #wget https://julialang-s3.julialang.org/bin/linux/x64/0.6/julia-0.6.1-linux-x86_64.tar.gz
+    #wget https://julialang.s3.amazonaws.com/bin/linux/x64/0.5/julia-0.5.0-linux-x86_64.tar.gz # julia-3c9d75391c
+    #wget https://julialang-s3.julialang.org/bin/linux/x64/0.6/julia-0.6.1-linux-x86_64.tar.gz # julia-0d7248e2ff
+    #wget https://julialang-s3.julialang.org/bin/linux/x64/0.6/julia-0.6.2-linux-x86_64.tar.gz  # julia-d386e40c17
+    aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/julia-0.6.2-linux-x86_64.tar.gz .
+    #tar xvfz julia-0.5.0-linux-x86_64.tar.gz
     #tar xvfz julia-0.6.1-linux-x86_64.tar.gz
+    tar xvfz julia-0.6.2-linux-x86_64.tar.gz
   fi
-  cd julia-3c9d75391c
+  #cd julia-3c9d75391c
   #cd julia-0d7248e2ff
+  cd julia-d386e40c17
   sudo cp -pr bin/* /usr/bin/
   sudo cp -pr lib/* /usr/lib/
   #sudo cp -pr libexec/* /usr/libexec/
@@ -429,10 +444,13 @@ if [ "$IS_MASTER" = true ]; then
 if [ "$RUBY_KERNEL" = true ]; then
   cd /mnt
   if [ "$USE_CACHED_DEPS" != true ]; then
-    wget http://ftp.ruby-lang.org/pub/ruby/2.1/ruby-2.1.8.tar.gz 
-    tar xvzf ruby-2.1.8.tar.gz
+    #wget http://ftp.ruby-lang.org/pub/ruby/2.1/ruby-2.1.8.tar.gz
+    wget https://cache.ruby-lang.org/pub/ruby/2.5/ruby-2.5.0.tar.gz
+    #tar xvzf ruby-2.1.8.tar.gz
+    tar xvzf ruby-2.5.0.tar.gz
   fi
-  cd ruby-2.1.8
+  #cd ruby-2.1.8
+  cd ruby-2.5.0
   ./configure --prefix=/usr
   make -j $NPROC
   sudo make install
@@ -486,9 +504,10 @@ if [ "$SSL" = true ]; then
 fi
 
 # install default kernels
-sudo python3 -m pip install notebook ipykernel
+sudo python3 -m pip install $UPDATE_FLAG notebook ipykernel
+sudo python3 -m pip install tornado==4.5.3 # fix the latest tonardo and asyncio package conflict
 sudo python3 -m ipykernel install
-sudo python -m pip install notebook ipykernel
+sudo python -m pip install $UPDATE_FLAG notebook ipykernel
 sudo python -m ipykernel install
 sudo python3 -m pip install metakernel
 #sudo python3 -m pip install gnuplot_kernel
@@ -502,14 +521,16 @@ if [ "$JS_KERNEL" = true ]; then
   sudo ijs --ijs-install=global
   sudo jp-coffee --jp-install=global
 fi
-sudo python3 -m pip install jupyter_contrib_nbextensions
-sudo python -m pip install jupyter_contrib_nbextensions
+sudo python3 -m pip install $UPDATE_FLAG jupyter_contrib_nbextensions
+sudo python -m pip install $UPDATE_FLAG jupyter_contrib_nbextensions
+sudo python3 -m pip install -U six
+sudo python -m pip install -U six
 sudo jupyter contrib nbextension install --system
-sudo python3 -m pip install jupyter_nbextensions_configurator
-sudo python -m pip install jupyter_nbextensions_configurator
+sudo python3 -m pip install $UPDATE_FLAG jupyter_nbextensions_configurator
+sudo python -m pip install $UPDATE_FLAG jupyter_nbextensions_configurator
 sudo jupyter nbextensions_configurator enable --system
-sudo python3 -m pip install ipywidgets
-sudo python -m pip install ipywidgets
+sudo python3 -m pip install $UPDATE_FLAG ipywidgets
+sudo python -m pip install $UPDATE_FLAG ipywidgets
 sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
 
 sudo python3 -m pip install pyeda # only work for python3
@@ -667,11 +688,6 @@ if [ "$COPY_SAMPLES" = true ]; then
     aws s3 sync s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/notebooks/ ${NOTEBOOK_DIR}samples || true
     sudo cp -pr ${NOTEBOOK_DIR}samples /home/$JUPYTER_HUB_DEFAULT_USER/
     sudo chown -R $JUPYTER_HUB_DEFAULT_USER:$JUPYTER_HUB_DEFAULT_USER /home/$JUPYTER_HUB_DEFAULT_USER/${NOTEBOOK_DIR}samples
-  fi
-  if [ "$BIGDL" = true ]; then
-    aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/notebooks/text_classfication.ipynb ${NOTEBOOK_DIR}.
-    sudo cp ${NOTEBOOK_DIR}text_classfication.ipynb /home/$JUPYTER_HUB_DEFAULT_USER/${NOTEBOOK_DIR}
-    sudo chown -R $JUPYTER_HUB_DEFAULT_USER:$JUPYTER_HUB_DEFAULT_USER /home/$JUPYTER_HUB_DEFAULT_USER/${NOTEBOOK_DIR}text_classfication.ipynb
   fi
 fi
 
@@ -916,7 +932,7 @@ fi
 
 if [ "$JUPYTER_HUB" = true ]; then
   sudo npm install -g --unsafe-perm configurable-http-proxy
-  sudo python3 -m pip install jupyterhub #notebook ipykernel
+  sudo python3 -m pip install $UPDATE_FLAG jupyterhub #notebook ipykernel
   #sudo python3 -m ipykernel install
   
   if [ ! "$JUPYTER_HUB_DEFAULT_USER" = "" ]; then
