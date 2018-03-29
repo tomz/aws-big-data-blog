@@ -535,8 +535,6 @@ sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
 
 sudo python3 -m pip install pyeda # only work for python3
 sudo python -m pip install gvmagic py_d3
-aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/rpy2-2.8.6.tar.gz /mnt/
-sudo python -m pip install /mnt/rpy2-2.8.6.tar.gz
 sudo python -m pip install ipython-sql
 
 if [ "$JULIA_KERNEL" = true ]; then
@@ -579,6 +577,10 @@ if [ "$TORCH_KERNEL" = true ]; then
 fi
 
 if [ "$R_KERNEL" = true ] || [ "$TOREE_KERNEL" = true ]; then
+  sudo yum install -y R-devel readline-dev
+  aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/rpy2-2.8.6.tar.gz /mnt/
+  sudo python -m pip install /mnt/rpy2-2.8.6.tar.gz
+
   if [ ! -f /tmp/Renvextra ]; then # check if the rstudio ba was run, it does this already 
    sudo sed -i "s/make/make -j $NPROC/g" /usr/lib64/R/etc/Renviron
   fi
