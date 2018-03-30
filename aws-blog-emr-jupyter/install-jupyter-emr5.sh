@@ -893,8 +893,16 @@ if [ "$TOREE_KERNEL" = true ]; then
   # spark 2.0
   cd /mnt
   if [ "$USE_CACHED_DEPS" != true ]; then
-    curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
-    sudo yum install docker sbt -y
+    #curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
+    #sudo yum install sbt -y
+    #binstry sbt rpm repo goes down sometimes, switch to manuall install:    
+    aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/sbt-1.1.1.tgz .
+    tar xvfz sbt-1.1.1.tgz
+    sudo mv sbt/bin/* /usr/bin/
+    sudo mv sbt/conf /etc/sbt
+    rm -rf sbt
+    
+    sudo yum install docker -y
   fi
   if [ ! "$USE_CACHED_DEPS" = true ]; then
     git clone https://github.com/apache/incubator-toree.git
