@@ -296,6 +296,7 @@ if [ "$USE_CACHED_DEPS" = true ]; then
 else
   sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm libXt libX11-devel libXt-devel libcurl libcurl-devel git graphviz cyrus-sasl cyrus-sasl-devel readline readline-devel gnuplot
   sudo yum install --enablerepo=epel -y nodejs npm zeromq3 zeromq3-devel
+  sudo npm config set registry http://registry.npmjs.org/
   sudo yum install -y gcc-c++ patch zlib zlib-devel
   sudo  yum install -y libyaml-devel libffi-devel openssl-devel make
   sudo yum install -y bzip2 autoconf automake libtool bison iconv-devel sqlite-devel
