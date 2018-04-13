@@ -1,4 +1,18 @@
 #!/bin/bash
+#
+# Copyright 2016-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Amazon Software License (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+# http://aws.amazon.com/asl/
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
 set -x -e
 
 # AWS EMR bootstrap script 
@@ -21,6 +35,7 @@ set -x -e
 # 2018-03-06 - Tom Zeng, fix the latest tornado (5.0) and asyncio package conflict by using tornadio 4.5.3
 # 2018-03-08 - Tom Zeng, upgrade Julia from 0.5 to 0.6.2, upgrade MXNet to the latest available version, upgrade Ruby to 2.5.0
 # 2018-03-09 - Tom Zeng, upgrade TensorFlow to 1.6, add SageMaker to --ml-packages
+# 2018-04-12 - Tom Zeng, fixed JupyterHub s3 storage, it works only with --s3fs, each user's notebooks are stored in s://<bucket>/<folder>/<user>
 
 
 #
@@ -44,6 +59,7 @@ set -x -e
 # --jupyterhub - install JupyterHub
 # --jupyterhub-port - set the port for JupyterHub, default is 8000
 # --no-jupyter - if JupyterHub is installed, use this to disable Jupyter
+# --no-jupyterhub - if Jupyter is installed, use this to disable JupyterHub
 # --notebook-dir - specify notebook folder, this could be a local directory or a S3 bucket
 # --cached-install - use some cached dependency artifacts on s3 to speed up installation
 # --ssl - enable ssl, make sure to use your own cert and key files to get rid of the warning
@@ -77,7 +93,7 @@ PYTHON_PACKAGES=""
 RUN_AS_STEP=false
 NOTEBOOK_DIR=""
 NOTEBOOK_DIR_S3=false
-JUPYTER_PORT=8888
+JUPYTER_PORT=8885
 JUPYTER_PASSWORD=""
 JUPYTER_LOCALHOST_ONLY=false
 PYTHON3=false
@@ -85,7 +101,7 @@ GPU=false
 CPU_GPU="cpu"
 GPUU=""
 JUPYTER_HUB=true
-JUPYTER_HUB_PORT=8000
+JUPYTER_HUB_PORT=8005
 JUPYTER_HUB_IP="*"
 JUPYTER_HUB_DEFAULT_USER="jupyter"
 INTERPRETERS="Scala,SQL,PySpark,SparkR"
@@ -203,6 +219,9 @@ while [ $# -gt 0 ]; do
       ;;
     --no-jupyter)
       NO_JUPYTER=true
+      ;;
+    --no-jupyterhub)
+      JUPYTER_HUB=false
       ;;
     --ssl)
       SSL=true
@@ -665,9 +684,22 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
       #/usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 $BUCKET /mnt/$BUCKET
       # -o nodnscache -o nosscache -o parallel_count=20  -o multipart_size=50
       /usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 -o url=https://s3.amazonaws.com  -o no_check_certificate -o enable_noobj_cache -o use_cache=/mnt/s3fs-cache $BUCKET /mnt/$BUCKET
+      if [ "$JUPYTER_HUB" = true ]; then
+        mkdir -p /mnt/$BUCKET/$FOLDER/${JUPYTER_HUB_DEFAULT_USER}
+      fi
       #/usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 -o use_cache=/mnt/s3fs-cache $BUCKET /mnt/$BUCKET
       echo "c.NotebookApp.notebook_dir = '/mnt/$BUCKET/$FOLDER'" >> ~/.jupyter/jupyter_notebook_config.py
       echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
+      if [ "$JUPYTER_HUB" = true ]; then
+        echo "try:" >> ~/.jupyter/jupyter_notebook_config.py
+        echo "  from jupyterhub.spawner import LocalProcessSpawner" >> ~/.jupyter/jupyter_notebook_config.py
+        echo "  class MySpawner(LocalProcessSpawner):" >> ~/.jupyter/jupyter_notebook_config.py
+        echo "      def _notebook_dir_default(self):" >> ~/.jupyter/jupyter_notebook_config.py
+        echo "        return c.NotebookApp.notebook_dir + '/' + self.user.name" >> ~/.jupyter/jupyter_notebook_config.py
+        echo "  c.JupyterHub.spawner_class = MySpawner" >> ~/.jupyter/jupyter_notebook_config.py 
+        echo "except:" >> ~/.jupyter/jupyter_notebook_config.py
+        echo "  print('jupyterhub module not found')" >> ~/.jupyter/jupyter_notebook_config.py
+      fi
     fi
   else
     echo "c.NotebookApp.notebook_dir = '$NOTEBOOK_DIR'" >> ~/.jupyter/jupyter_notebook_config.py
@@ -683,6 +715,9 @@ if [ "$COPY_SAMPLES" = true ]; then
   cd ~
   if [ "$NOTEBOOK_DIR_S3" = true ]; then
     aws s3 sync s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/notebooks/ ${NOTEBOOK_DIR}samples/ || true
+    if [ "$JUPYTER_HUB" = true ]; then
+      aws s3 sync s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/notebooks/ ${NOTEBOOK_DIR}${JUPYTER_HUB_DEFAULT_USER}/samples/ || true
+    fi
   else
     if [ ! "$NOTEBOOK_DIR" = "" ]; then
       mkdir -p ${NOTEBOOK_DIR}samples || true
