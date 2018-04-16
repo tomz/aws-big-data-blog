@@ -125,6 +125,8 @@ MXNET=false
 DL4J=false
 NPROC=$(nproc)
 UPDATE_FLAG=""
+USE_SSE=false
+KMS_ID=""
 
 # get input parameters
 while [ $# -gt 0 ]; do
@@ -247,6 +249,13 @@ while [ $# -gt 0 ]; do
       #NOTEBOOK_DIR_S3_S3NB=false
       NOTEBOOK_DIR_S3_S3CONTENTS=false
       ;;
+    --use-sse)
+      USE_SSE=true
+      ;;
+    --kms-id)
+      shift
+      KMS_ID=$1
+      ;;
     #--s3nb) # this stopped working after Jupyter update in early 2017
     #  NOTEBOOK_DIR_S3_S3NB=true
     #  ;;
@@ -359,8 +368,8 @@ if [ "$INSTALL_PY3_PKGS" = true ]; then
   sudo python3 -m pip install matplotlib seaborn bokeh cython networkx findspark
   sudo python3 -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite
 else
-  sudo python -m pip install matplotlib seaborn bokeh cython networkx findspark
-  sudo python -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite
+  sudo python -m pip install matplotlib seaborn bokeh cython networkx findspark --ignore-installed
+  sudo python -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite --ignore-installed
 fi
 
 if [ "$DS_PACKAGES" = true ]; then
@@ -398,7 +407,7 @@ if [ ! "$PYTHON_PACKAGES" = "" ]; then
   if [ "$INSTALL_PY3_PKGS" = true ]; then
     sudo python3 -m pip install $PYTHON_PACKAGES || true
   else
-    sudo python -m pip install $PYTHON_PACKAGES || true
+    sudo python -m pip install $PYTHON_PACKAGES --ignore-installed || true
   fi
 fi
 
@@ -527,7 +536,7 @@ fi
 sudo python3 -m pip install $UPDATE_FLAG notebook ipykernel
 sudo python3 -m pip install tornado==4.5.3 # fix the latest tonardo and asyncio package conflict
 sudo python3 -m ipykernel install
-sudo python -m pip install $UPDATE_FLAG notebook ipykernel
+sudo python -m pip install $UPDATE_FLAG notebook ipykernel --ignore-installed
 sudo python -m ipykernel install
 sudo python3 -m pip install metakernel
 #sudo python3 -m pip install gnuplot_kernel
@@ -544,18 +553,18 @@ fi
 sudo python3 -m pip install $UPDATE_FLAG jupyter_contrib_nbextensions
 sudo python -m pip install $UPDATE_FLAG jupyter_contrib_nbextensions
 sudo python3 -m pip install -U six
-sudo python -m pip install -U six
+sudo python -m pip install -U six --ignore-installed
 sudo jupyter contrib nbextension install --system
 sudo python3 -m pip install $UPDATE_FLAG jupyter_nbextensions_configurator
-sudo python -m pip install $UPDATE_FLAG jupyter_nbextensions_configurator
+sudo python -m pip install $UPDATE_FLAG jupyter_nbextensions_configurator --ignore-installed
 sudo jupyter nbextensions_configurator enable --system
 sudo python3 -m pip install $UPDATE_FLAG ipywidgets
-sudo python -m pip install $UPDATE_FLAG ipywidgets
+sudo python -m pip install $UPDATE_FLAG ipywidgets --ignore-installed
 sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
 
 sudo python3 -m pip install pyeda # only work for python3
-sudo python -m pip install gvmagic py_d3
-sudo python -m pip install ipython-sql
+sudo python -m pip install gvmagic py_d3 --ignore-installed
+sudo python -m pip install ipython-sql --ignore-installed
 
 if [ "$JULIA_KERNEL" = true ]; then
   julia -e 'Pkg.add("IJulia")'
@@ -635,7 +644,7 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
         git clone https://github.com/tomz/s3nb.git
       fi
       cd s3nb
-      sudo python -m pip install entrypoints
+      sudo python -m pip install entrypoints --ignore-installed
       sudo python setup.py install
       if [ "$JUPYTER_HUB" = true ]; then
         sudo python3 -m pip install entrypoints
@@ -683,7 +692,15 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
       mkdir -p /mnt/$BUCKET
       #/usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 $BUCKET /mnt/$BUCKET
       # -o nodnscache -o nosscache -o parallel_count=20  -o multipart_size=50
-      /usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 -o url=https://s3.amazonaws.com  -o no_check_certificate -o enable_noobj_cache -o use_cache=/mnt/s3fs-cache $BUCKET /mnt/$BUCKET
+      S3SSE_FLAG=""
+      if [ "$USE_SSE" = true ]; then
+        if [ ! "KMS_ID" = "" ]; then
+          S3SSE_FLAG = "-o use_sse='kmsid:$KMS_ID'"
+        else
+          S3SSE_FLAG = "-o use_sse"
+        fi
+      fi
+      /usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 -o url=https://s3.amazonaws.com  -o no_check_certificate -o enable_noobj_cache -o use_cache=/mnt/s3fs-cache $S3SSE_FLAG $BUCKET /mnt/$BUCKET
       if [ "$JUPYTER_HUB" = true ]; then
         mkdir -p /mnt/$BUCKET/$FOLDER/${JUPYTER_HUB_DEFAULT_USER}
       fi
@@ -986,7 +1003,7 @@ if [ "$JUPYTER_HUB" = true ]; then
   fi
   # change the password of the hadoop user to JUPYTER_PASSWORD
   if [ ! "$JUPYTER_PASSWORD" = "" ]; then
-    sudo sh -c "echo '$JUPYTER_PASSWORD' | passwd $JUPYTER_HUB_DEFAULT_USER --stdin"
+    sudo sh -c "echo '$JUPYTER_PASSWORD' | passwd --stdin $JUPYTER_HUB_DEFAULT_USER"
   fi
   
   sudo ln -sf /usr/local/bin/jupyterhub /usr/bin/
