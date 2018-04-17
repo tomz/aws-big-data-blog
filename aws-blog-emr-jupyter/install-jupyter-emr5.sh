@@ -368,8 +368,8 @@ if [ "$INSTALL_PY3_PKGS" = true ]; then
   sudo python3 -m pip install matplotlib seaborn bokeh cython networkx findspark
   sudo python3 -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite
 else
-  sudo python -m pip install matplotlib seaborn bokeh cython networkx findspark --ignore-installed
-  sudo python -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite --ignore-installed
+  sudo python -m pip install matplotlib seaborn bokeh cython networkx findspark
+  sudo python -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite --ignore-installed chardet
 fi
 
 if [ "$DS_PACKAGES" = true ]; then
@@ -407,7 +407,7 @@ if [ ! "$PYTHON_PACKAGES" = "" ]; then
   if [ "$INSTALL_PY3_PKGS" = true ]; then
     sudo python3 -m pip install $PYTHON_PACKAGES || true
   else
-    sudo python -m pip install $PYTHON_PACKAGES --ignore-installed || true
+    sudo python -m pip install $PYTHON_PACKAGES || true
   fi
 fi
 
@@ -536,7 +536,7 @@ fi
 sudo python3 -m pip install $UPDATE_FLAG notebook ipykernel
 sudo python3 -m pip install tornado==4.5.3 # fix the latest tonardo and asyncio package conflict
 sudo python3 -m ipykernel install
-sudo python -m pip install $UPDATE_FLAG notebook ipykernel --ignore-installed
+sudo python -m pip install $UPDATE_FLAG notebook ipykernel
 sudo python -m ipykernel install
 sudo python3 -m pip install metakernel
 #sudo python3 -m pip install gnuplot_kernel
@@ -553,18 +553,18 @@ fi
 sudo python3 -m pip install $UPDATE_FLAG jupyter_contrib_nbextensions
 sudo python -m pip install $UPDATE_FLAG jupyter_contrib_nbextensions
 sudo python3 -m pip install -U six
-sudo python -m pip install -U six --ignore-installed
+sudo python -m pip install -U six
 sudo jupyter contrib nbextension install --system
 sudo python3 -m pip install $UPDATE_FLAG jupyter_nbextensions_configurator
-sudo python -m pip install $UPDATE_FLAG jupyter_nbextensions_configurator --ignore-installed
+sudo python -m pip install $UPDATE_FLAG jupyter_nbextensions_configurator
 sudo jupyter nbextensions_configurator enable --system
 sudo python3 -m pip install $UPDATE_FLAG ipywidgets
-sudo python -m pip install $UPDATE_FLAG ipywidgets --ignore-installed
+sudo python -m pip install $UPDATE_FLAG ipywidgets
 sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
 
 sudo python3 -m pip install pyeda # only work for python3
-sudo python -m pip install gvmagic py_d3 --ignore-installed
-sudo python -m pip install ipython-sql --ignore-installed
+sudo python -m pip install gvmagic py_d3
+sudo python -m pip install ipython-sql
 
 if [ "$JULIA_KERNEL" = true ]; then
   julia -e 'Pkg.add("IJulia")'
@@ -644,7 +644,7 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
         git clone https://github.com/tomz/s3nb.git
       fi
       cd s3nb
-      sudo python -m pip install entrypoints --ignore-installed
+      sudo python -m pip install entrypoints
       sudo python setup.py install
       if [ "$JUPYTER_HUB" = true ]; then
         sudo python3 -m pip install entrypoints
