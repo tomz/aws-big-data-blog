@@ -1,0 +1,105 @@
+Using custom AMI to install Jupyter/Lab/Hub on EMR
+
+Using custom AMI with apps and packages pre-loaded improves the cluster launch time dramatically - full option install time down to 15 minutes from 55 minutes.  Updated AWS Big Data Blog:
+
+
+Run Jupyter Notebook and JupyterHub on Amazon EMR
+by Tom Zeng | on 21 DEC 2016 (updated on 15 MAY 2018) | in Amazon EMR | Permalink |  Comments |  Share
+
+NOTE: The content in this post may need periodic updates as newer versions become available. Please leave a comment if you have any trouble implementing this solution.
+
+Tom Zeng is a Solutions Architect for Amazon EMR
+
+Jupyter Notebook (formerly IPython) is one of the most popular user interfaces for running Python, R, Julia, Scala, and other languages to process and visualize data, perform statistical analysis, and train and run machine learning models. Jupyter notebooks are self-contained documents that can include live code, charts, narrative text, and more. The notebooks can be easily converted to HTML, PDF, and other formats for sharing.
+
+Amazon EMR is a popular hosted big data processing service that allows users to easily run Hadoop, Spark, Presto, and other Hadoop ecosystem applications, such as Hive and Pig.
+
+Python, Scala, and R provide support for Spark and Hadoop, and running them in Jupyter on Amazon EMR makes it easy to take advantage of:
+
+the big-data processing capabilities of Hadoop applications.
+the large selection of Python and R packages for analytics and visualization.
+JupyterHub is a multiple-user environment for Jupyter. You can use the following bootstrap action (BA) to install Jupyter and JupyterHub on Amazon EMR:
+
+s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/install-jupyter-emr5-custom-ami.sh
+These are the supported Jupyter kernels:
+
+Python
+R
+Scala
+Apache Toree (which provides the Spark, PySpark, SparkR, and SparkSQL kernels)
+Julia
+Ruby
+JavaScript
+CoffeeScript
+SparkMagic
+
+The BA will install Jupyter, JupyterLab, JupyterHub, and sample notebooks on the master node (JupyterHub Lab will be added in the future).
+
+Commonly used Python and R data science and machine learning packages can be optionally installed on all nodes. Use the Python 2 (or Python 3 if you use --python3 option) notebook to run PySpark code, use the R notebook to run SparkR code, and use Toree Scala notebook to run Spark Scala code.
+
+The following arguments can be passed to the BA:
+
+--r	Install the IRKernel for R.
+--toree	Install the Apache Toree kernel that supports Scala, PySpark, SQL, SparkR for Apache Spark.
+--julia	Install the IJulia kernel for Julia.
+--jupyterlab	Install the JupyterLab instead of the classic Jupyter notebook UI
+--ruby	Install the iRuby kernel for Ruby.
+--sparkmagic	Install the SparkMagic kernel
+--graphframes	Install the GraphFrames library for Spark
+--bigdl	Install Intel’s BigDL deep learning libraries.
+--python-packages	Install specific Python packages (for example, ggplot and nilearn).
+--port	Set the port for Jupyter notebook. The default is 8888.
+--user	Set the default user for JupyterHub, default is jupyter.
+--password	Set the password for the Jupyter notebook.
+--localhost-only	Restrict Jupyter to listen on localhost only. The default is to listen on all IP addresses.
+--jupyterhub	Install JupyterHub.
+--jupyterhub-port	Set the port for JuputerHub. The default is 8000.
+--notebook-dir	Specify the notebook folder. This could be a local directory or an S3 bucket.
+--dask	install Dask and Dask.distributed, with the scheduler on master instance and the workers on the slave instances.
+--ssl	Enable SSL. For production, make sure to use your own certificate and key files.
+--copy-samples	Copy sample notebooks to the notebook folder.
+--spark-opts	User-supplied Spark options to override the default values.
+--python3	Packages and apps installed for Python 3 instead of Python 2.
+--s3fs	Use s3fs instead of the default, s3contents for storing notebooks on Amazon S3.
+
+By default (with no --password and --port arguments), Jupyter will run on port 8888 with no password protection; JupyterHub will run on port 8000.  The --port and  --jupyterhub-portarguments can be used to override the default ports to avoid conflicts with other applications.
+
+The --r option installs the IRKernel for R. It also installs SparkR and sparklyr for R, so make sure Spark is one of the selected EMR applications to be installed. You’ll need the Spark application if you use the --toree argument.
+
+If you used --jupyterhub, use Linux users to sign in to JupyterHub. (Be sure to create passwords for the Linux users first.)  jupyter, the default admin user for JupyterHub, can be used to set up other users. The --password option sets the password for Jupyter and for the jupyter user for JupyterHub.
+
+Jupyter on EMR allows users to save their work on Amazon S3 rather than on local storage on the EMR cluster (master node).
+
+To store notebooks on S3, use:
+
+--notebook-dir <s3://your-bucket/folder/>
+To store notebooks in a directory different from the user’s home directory, use:
+
+--notebook-dir <local directory>
+The following example CLI command is used to launch a five-node (c3.4xlarge) EMR 5.13. cluster with the bootstrap action. The BA will install all the available kernels. It will also install the ggplot and nilearn Python packages and set:
+
+the Jupyter port to 8887
+the password to jupyter
+the JupyterHub port to 8007
+
+The bootstrap action makes use of this custom AMI for EMR: ami-d7da4ea8, and it needs a minimum EBS root volume size of 50GB
+
+aws emr create-cluster --release-label emr-5.13.0 \
+  --name 'emr-5.13.0 jupyter/ cli example' \
+  --applications Name=Hadoop Name=Hive Name=Spark Name=Pig Name=Tez Name=Ganglia Name=Presto \
+  --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
+  --service-role EMR_DefaultRole \  
+  --instance-groups \
+    InstanceGroupType=MASTER,InstanceCount=1,InstanceType=c3.4xlarge \
+    InstanceGroupType=CORE,InstanceCount=4,InstanceType=c3.4xlarge \
+  --region us-east-1 \
+  --log-uri s3://<your-s3-bucket>/emr-logs/ \
+  --custom-ami-id ami-d7da4ea8 \
+  --ebs-root-volume-size 50 \
+  --bootstrap-actions \
+    Name='Install Jupyter notebook',Path="s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/install-jupyter-emr5-custom-ami.sh",Args=[--r,--julia,--toree,--jupyterlab,--ruby,--python-packages,'ggplot nilearn',--port,8887,--password,jupyter,--jupyterhub,--jupyterhub-port,8007,--s3fs,--notebook-dir,s3://<your-s3-bucket>/notebooks/,--copy-samples]
+
+Replace <your-ec2-key> with your AWS access key and <your-s3-bucket> with the S3 bucket where you store notebooks. You can also change the instance types to suit your needs and budget.
+
+NOTE: the estimated cluster launch time is around 10 to 20 minutes depending on the EMR apps selected and the bootstrap action options
+
