@@ -44,7 +44,7 @@ The following arguments can be passed to the BA:
   --julia           Install the IJulia kernel for Julia.
   --jupyterlab      Install the JupyterLab instead of the classic Jupyter notebook UI.
   --ruby            Install the iRuby kernel for Ruby.
-  --sparkmagic      Install the SparkMagic kernel (needs Livy to installed).
+  --sparkmagic      Install the SparkMagic kernel (needs Livy to be installed).
   --graphframes     Install the GraphFrames library for Spark
   --bigdl           Install Intel’s BigDL deep learning libraries.
   --python-packages Install specific Python packages (single quote space separated in CLI, double quote in EMR Console).
