@@ -42,9 +42,9 @@ The following arguments can be passed to the BA:
   --r               Install the IRKernel for R.
   --toree           Install the Apache Toree kernel that supports Scala, PySpark, SQL, SparkR for Apache Spark.
   --julia           Install the IJulia kernel for Julia.
-  --jupyterlab      Install the JupyterLab instead of the classic Jupyter notebook UI
+  --jupyterlab      Install the JupyterLab instead of the classic Jupyter notebook UI.
   --ruby            Install the iRuby kernel for Ruby.
-  --sparkmagic      Install the SparkMagic kernel
+  --sparkmagic      Install the SparkMagic kernel (needs Livy to installed).
   --graphframes     Install the GraphFrames library for Spark
   --bigdl           Install Intel’s BigDL deep learning libraries.
   --python-packages Install specific Python packages (single quote space separated in CLI, double quote in EMR Console).
@@ -86,7 +86,7 @@ The following example CLI command is used to launch a five-node (c3.4xlarge) EMR
 
 aws emr create-cluster --release-label emr-5.13.0 \
   --name 'emr-5.13.0 jupyter/ cli example' \
-  --applications Name=Hadoop Name=Hive Name=Spark Name=Pig Name=Tez Name=Ganglia Name=Presto \
+  --applications Name=Hadoop Name=Hive Name=Spark Name=Pig Name=Tez Name=Ganglia Name=Presto Name=Livy \
   --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \  
   --instance-groups \
