@@ -84,8 +84,6 @@ The following example CLI command is used to launch a five-node (c3.4xlarge) EMR
   the password to jupyter
   the JupyterHub port to 8007
 
-The bootstrap action makes use of this custom AMI for EMR: ami-d7da4ea8, and it needs a minimum EBS root volume size of 50GB
-
 aws emr create-cluster --release-label emr-5.13.0 \
   --name 'emr-5.13.0 jupyter/ cli example' \
   --applications Name=Hadoop Name=Hive Name=Spark Name=Pig Name=Tez Name=Ganglia Name=Presto \
@@ -102,6 +100,8 @@ aws emr create-cluster --release-label emr-5.13.0 \
     Name='Install Jupyter notebook',Path="s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/install-jupyter-emr5-custom-ami.sh",Args=[--r,--julia,--sparkmagic,--graphframes,--toree,--jupyterlab,--ruby,--python-packages,'ggplot nilearn',--port,8887,--password,jupyter,--jupyterhub,--jupyterhub-port,8007,--s3fs,--notebook-dir,s3://<your-s3-bucket>/notebooks/,--copy-samples]
 
 Replace <your-ec2-key> with your AWS access key and <your-s3-bucket> with the S3 bucket where you store notebooks. You can also change the instance types to suit your needs and budget.
+
+The bootstrap action makes use of this custom AMI for EMR: ami-d7da4ea8, and it needs a minimum EBS root volume size of 50GB
 
 NOTE: the estimated cluster launch time is around 10 to 20 minutes depending on the EMR apps selected and the bootstrap action options
 
