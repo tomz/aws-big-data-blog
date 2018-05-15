@@ -40,27 +40,27 @@ Commonly used Python and R data science and machine learning packages can be opt
 The following arguments can be passed to the BA:
 
   --r               Install the IRKernel for R.
-  --toree	          Install the Apache Toree kernel that supports Scala, PySpark, SQL, SparkR for Apache Spark.
-  --julia	          Install the IJulia kernel for Julia.
-  --jupyterlab	    Install the JupyterLab instead of the classic Jupyter notebook UI
-  --ruby	          Install the iRuby kernel for Ruby.
-  --sparkmagic	    Install the SparkMagic kernel
-  --graphframes	    Install the GraphFrames library for Spark
-  --bigdl	          Install Intel’s BigDL deep learning libraries.
-  --python-packages	Install specific Python packages (single quote space separated in CLI, double quote in EMR Console).
-  --port	          Set the port for Jupyter notebook. The default is 8888.
-  --user	          Set the default user for JupyterHub, default is jupyter.
-  --password	      Set the password for the Jupyter notebook.
-  --localhost-only	Restrict Jupyter to listen on localhost only. The default is to listen on all IP addresses.
-  --jupyterhub	    Install JupyterHub.
-  --jupyterhub-port	Set the port for JuputerHub. The default is 8000.
-  --notebook-dir	  Specify the notebook folder. This could be a local directory or an S3 bucket.
-  --dask	          Install Dask and Dask.distributed, with scheduler on master and workers on slave instances.
-  --ssl	            Enable SSL. For production, make sure to use your own certificate and key files.
-  --copy-samples	  Copy sample notebooks to the notebook folder.
-  --spark-opts	    User-supplied Spark options to override the default values.
-  --python3	        Packages and apps installed for Python 3 instead of Python 2.
-  --s3fs	          Use s3fs instead of the default, s3contents for storing notebooks on Amazon S3.
+  --toree           Install the Apache Toree kernel that supports Scala, PySpark, SQL, SparkR for Apache Spark.
+  --julia           Install the IJulia kernel for Julia.
+  --jupyterlab      Install the JupyterLab instead of the classic Jupyter notebook UI
+  --ruby            Install the iRuby kernel for Ruby.
+  --sparkmagic      Install the SparkMagic kernel
+  --graphframes     Install the GraphFrames library for Spark
+  --bigdl           Install Intel’s BigDL deep learning libraries.
+  --python-packages Install specific Python packages (single quote space separated in CLI, double quote in EMR Console).
+  --port            Set the port for Jupyter notebook. The default is 8888.
+  --user            Set the default user for JupyterHub, default is jupyter.
+  --password        Set the password for the Jupyter notebook.
+  --localhost-only  Restrict Jupyter to listen on localhost only. The default is to listen on all IP addresses.
+  --jupyterhub      Install JupyterHub.
+  --jupyterhub-port Set the port for JuputerHub. The default is 8000.
+  --notebook-dir    Specify the notebook folder. This could be a local directory or an S3 bucket.
+  --dask            Install Dask and Dask.distributed, with scheduler on master and workers on slave instances.
+  --ssl             Enable SSL. For production, make sure to use your own certificate and key files.
+  --copy-samples    Copy sample notebooks to the notebook folder.
+  --spark-opts      User-supplied Spark options to override the default values.
+  --python3         Packages and apps installed for Python 3 instead of Python 2.
+  --s3fs            Use s3fs instead of the default, s3contents for storing notebooks on Amazon S3.
 
 By default (with no --password and --port arguments), Jupyter will run on port 8888 with no password protection; JupyterHub will run on port 8000(note that those two ports are very likely already used by other EMR apps, recommend using 8887 and 8007 or other ports).  The --port and  --jupyterhub-portarguments can be used to override the default ports to avoid conflicts with other applications.
 
