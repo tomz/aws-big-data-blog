@@ -23,15 +23,15 @@ JupyterHub is a multiple-user environment for Jupyter. You can use the following
 s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/install-jupyter-emr5-custom-ami.sh
 These are the supported Jupyter kernels:
 
-Python
-R
-Scala
-Apache Toree (which provides the Spark, PySpark, SparkR, and SparkSQL kernels)
-Julia
-Ruby
-JavaScript
-CoffeeScript
-SparkMagic
+  Python
+  R
+  Scala
+  Apache Toree (which provides the Spark, PySpark, SparkR, and SparkSQL kernels)
+  Julia
+  Ruby
+  JavaScript
+  CoffeeScript
+  SparkMagic
 
 The BA will install Jupyter, JupyterLab, JupyterHub, and sample notebooks on the master node (JupyterHub Lab will be added in the future).
 
@@ -39,30 +39,30 @@ Commonly used Python and R data science and machine learning packages can be opt
 
 The following arguments can be passed to the BA:
 
---r	Install the IRKernel for R.
---toree	Install the Apache Toree kernel that supports Scala, PySpark, SQL, SparkR for Apache Spark.
---julia	Install the IJulia kernel for Julia.
---jupyterlab	Install the JupyterLab instead of the classic Jupyter notebook UI
---ruby	Install the iRuby kernel for Ruby.
---sparkmagic	Install the SparkMagic kernel
---graphframes	Install the GraphFrames library for Spark
---bigdl	Install Intel’s BigDL deep learning libraries.
---python-packages	Install specific Python packages (for example, ggplot and nilearn).
---port	Set the port for Jupyter notebook. The default is 8888.
---user	Set the default user for JupyterHub, default is jupyter.
---password	Set the password for the Jupyter notebook.
---localhost-only	Restrict Jupyter to listen on localhost only. The default is to listen on all IP addresses.
---jupyterhub	Install JupyterHub.
---jupyterhub-port	Set the port for JuputerHub. The default is 8000.
---notebook-dir	Specify the notebook folder. This could be a local directory or an S3 bucket.
---dask	install Dask and Dask.distributed, with the scheduler on master instance and the workers on the slave instances.
---ssl	Enable SSL. For production, make sure to use your own certificate and key files.
---copy-samples	Copy sample notebooks to the notebook folder.
---spark-opts	User-supplied Spark options to override the default values.
---python3	Packages and apps installed for Python 3 instead of Python 2.
---s3fs	Use s3fs instead of the default, s3contents for storing notebooks on Amazon S3.
+  --r               Install the IRKernel for R.
+  --toree	          Install the Apache Toree kernel that supports Scala, PySpark, SQL, SparkR for Apache Spark.
+  --julia	          Install the IJulia kernel for Julia.
+  --jupyterlab	    Install the JupyterLab instead of the classic Jupyter notebook UI
+  --ruby	          Install the iRuby kernel for Ruby.
+  --sparkmagic	    Install the SparkMagic kernel
+  --graphframes	    Install the GraphFrames library for Spark
+  --bigdl	          Install Intel’s BigDL deep learning libraries.
+  --python-packages	Install specific Python packages (single quote space separated in CLI, double quote in EMR Console).
+  --port	          Set the port for Jupyter notebook. The default is 8888.
+  --user	          Set the default user for JupyterHub, default is jupyter.
+  --password	      Set the password for the Jupyter notebook.
+  --localhost-only	Restrict Jupyter to listen on localhost only. The default is to listen on all IP addresses.
+  --jupyterhub	    Install JupyterHub.
+  --jupyterhub-port	Set the port for JuputerHub. The default is 8000.
+  --notebook-dir	  Specify the notebook folder. This could be a local directory or an S3 bucket.
+  --dask	          Install Dask and Dask.distributed, with scheduler on master and workers on slave instances.
+  --ssl	            Enable SSL. For production, make sure to use your own certificate and key files.
+  --copy-samples	  Copy sample notebooks to the notebook folder.
+  --spark-opts	    User-supplied Spark options to override the default values.
+  --python3	        Packages and apps installed for Python 3 instead of Python 2.
+  --s3fs	          Use s3fs instead of the default, s3contents for storing notebooks on Amazon S3.
 
-By default (with no --password and --port arguments), Jupyter will run on port 8888 with no password protection; JupyterHub will run on port 8000.  The --port and  --jupyterhub-portarguments can be used to override the default ports to avoid conflicts with other applications.
+By default (with no --password and --port arguments), Jupyter will run on port 8888 with no password protection; JupyterHub will run on port 8000(note that those two ports are very likely already used by other EMR apps, recommend using 8887 and 8007 or other ports).  The --port and  --jupyterhub-portarguments can be used to override the default ports to avoid conflicts with other applications.
 
 The --r option installs the IRKernel for R. It also installs SparkR and sparklyr for R, so make sure Spark is one of the selected EMR applications to be installed. You’ll need the Spark application if you use the --toree argument.
 
@@ -72,15 +72,17 @@ Jupyter on EMR allows users to save their work on Amazon S3 rather than on local
 
 To store notebooks on S3, use:
 
---notebook-dir <s3://your-bucket/folder/>
+  --notebook-dir <s3://your-bucket/folder/>
+
 To store notebooks in a directory different from the user’s home directory, use:
 
---notebook-dir <local directory>
+  --notebook-dir <local directory>
+
 The following example CLI command is used to launch a five-node (c3.4xlarge) EMR 5.13. cluster with the bootstrap action. The BA will install all the available kernels. It will also install the ggplot and nilearn Python packages and set:
 
-the Jupyter port to 8887
-the password to jupyter
-the JupyterHub port to 8007
+  the Jupyter port to 8887
+  the password to jupyter
+  the JupyterHub port to 8007
 
 The bootstrap action makes use of this custom AMI for EMR: ami-d7da4ea8, and it needs a minimum EBS root volume size of 50GB
 
@@ -97,7 +99,7 @@ aws emr create-cluster --release-label emr-5.13.0 \
   --custom-ami-id ami-d7da4ea8 \
   --ebs-root-volume-size 50 \
   --bootstrap-actions \
-    Name='Install Jupyter notebook',Path="s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/install-jupyter-emr5-custom-ami.sh",Args=[--r,--julia,--toree,--jupyterlab,--ruby,--python-packages,'ggplot nilearn',--port,8887,--password,jupyter,--jupyterhub,--jupyterhub-port,8007,--s3fs,--notebook-dir,s3://<your-s3-bucket>/notebooks/,--copy-samples]
+    Name='Install Jupyter notebook',Path="s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/install-jupyter-emr5-custom-ami.sh",Args=[--r,--julia,--sparkmagic,--graphframes,--toree,--jupyterlab,--ruby,--python-packages,'ggplot nilearn',--port,8887,--password,jupyter,--jupyterhub,--jupyterhub-port,8007,--s3fs,--notebook-dir,s3://<your-s3-bucket>/notebooks/,--copy-samples]
 
 Replace <your-ec2-key> with your AWS access key and <your-s3-bucket> with the S3 bucket where you store notebooks. You can also change the instance types to suit your needs and budget.
 
