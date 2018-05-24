@@ -93,7 +93,7 @@ PYTHON_PACKAGES=""
 RUN_AS_STEP=false
 NOTEBOOK_DIR=""
 NOTEBOOK_DIR_S3=false
-JUPYTER_PORT=8885
+JUPYTER_PORT=8887
 JUPYTER_PASSWORD=""
 JUPYTER_LOCALHOST_ONLY=false
 PYTHON3=false
@@ -101,7 +101,7 @@ GPU=false
 CPU_GPU="cpu"
 GPUU=""
 JUPYTER_HUB=true
-JUPYTER_HUB_PORT=8005
+JUPYTER_HUB_PORT=8007
 JUPYTER_HUB_IP="*"
 JUPYTER_HUB_DEFAULT_USER="jupyter"
 INTERPRETERS="Scala,SQL,PySpark,SparkR"
@@ -119,7 +119,7 @@ JS_KERNEL=false
 NO_JUPYTER=false
 INSTALL_DASK=false
 INSTALL_PY3_PKGS=false
-APACHE_SPARK_VERSION="2.2.0"
+APACHE_SPARK_VERSION="2.3.0"
 BIGDL=false
 MXNET=false
 DL4J=false
@@ -366,10 +366,12 @@ sudo ln -sf /usr/local/bin/ipython /usr/bin/
 sudo ln -sf /usr/local/bin/jupyter /usr/bin/
 if [ "$INSTALL_PY3_PKGS" = true ]; then
   sudo python3 -m pip install matplotlib seaborn bokeh cython networkx findspark
-  sudo python3 -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite
+  sudo python3 -m pip install pyhive sasl thrift thrift-sasl snakebite
+  sudo python3 -m pip install google-cloud==0.32.0 mrjob || true # workaround the possible failure
 else
   sudo python -m pip install matplotlib seaborn bokeh cython networkx findspark
-  sudo python -m pip install mrjob pyhive sasl thrift thrift-sasl snakebite --ignore-installed chardet
+  sudo python -m pip install pyhive sasl thrift thrift-sasl snakebite --ignore-installed chardet
+  sudo python -m pip install google-cloud==0.32.0 mrjob || true # workaround the possible failure
 fi
 
 if [ "$DS_PACKAGES" = true ]; then
@@ -421,8 +423,8 @@ if [ "$BIGDL" = true ]; then
   cd BigDL/
   export MAVEN_OPTS="-Xmx2g -XX:ReservedCodeCacheSize=512m"
   export BIGDL_HOME=/mnt/BigDL
-  export BIGDL_VER="0.4.0-SNAPSHOT"
-  bash make-dist.sh -P spark_2.2
+  export BIGDL_VER="0.6.0-SNAPSHOT"
+  bash make-dist.sh -P spark_2.x,scala_2.11
   mkdir /tmp/bigdl_summaries
   /usr/local/bin/tensorboard --debug INFO --logdir /tmp/bigdl_summaries/ > /tmp/tensorboard_bigdl.log 2>&1 &
 fi
@@ -601,6 +603,8 @@ if [ "$TORCH_KERNEL" = true ]; then
   fi
   cd iTorch
   luarocks make
+  #sudo env "PATH=$PATH:/usr/local/bin" luarocks make install
+  #sudo chown -R $USER $(dirname $(ipython locate profile))
   sudo cp -pr ~/.ipython/kernels/itorch /usr/local/share/jupyter/kernels/
   set -e
 fi
@@ -962,7 +966,8 @@ if [ "$TOREE_KERNEL" = true ]; then
   cd incubator-toree/
   git pull
   export APACHE_SPARK_VERSION=$APACHE_SPARK_VERSION
-  make -j $NPROC dist 
+  make -j $NPROC dist
+  sed -i "s/docker run -t/sudo docker run -t/" Makefile
   make clean release APACHE_SPARK_VERSION=$APACHE_SPARK_VERSION || true # gettting the docker not running error, swallow it with || true
   if [ "$RUN_AS_STEP" = true ]; then
     background_install_proc
