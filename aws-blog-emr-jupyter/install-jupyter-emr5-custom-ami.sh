@@ -488,7 +488,7 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
       #cd s3contents
       #sudo python setup.py install
       echo "c.NotebookApp.contents_manager_class = 's3contents.S3ContentsManager'" >> ~/.jupyter/jupyter_notebook_config.py
-      echo "c.S3ContentsManager.bucket_name = '$BUCKET'" >> ~/.jupyter/jupyter_notebook_config.py
+      echo "c.S3ContentsManager.bucket = '$BUCKET'" >> ~/.jupyter/jupyter_notebook_config.py
       echo "c.S3ContentsManager.prefix = '$FOLDER'" >> ~/.jupyter/jupyter_notebook_config.py
       # this following is no longer needed, default was fixed in the latest on github
       #echo "c.S3ContentsManager.endpoint_url = 'https://s3.amazonaws.com'" >> ~/.jupyter/jupyter_notebook_config.py
