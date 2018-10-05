@@ -302,11 +302,8 @@ sudo python -m pip install $PYTHON_PACKAGES || true
 if [ "$SPARKMAGIC" = false ]; then
   sudo rm -f /usr/local/share/jupyter/kernels/sparkmagic-spark
 else
-  if [ "$PYTHON3" = true ]; then
-    sudo sed -i "s/\"display_name\":\"PySpark\"/\"display_name\":\"SparkMagic PySpark\"/" /usr/local/share/jupyter/kernels/sparkmagic-pyspark/kernel.json
-  else
-    sudo sed -i "s/\"display_name\":\"PySpark3\"/\"display_name\":\"SparkMagic PySpark3\"/" /usr/local/share/jupyter/kernels/sparkmagic-pyspark3/kernel.json
-  fi
+  sudo sed -i "s/\"display_name\":\"PySpark\"/\"display_name\":\"SparkMagic PySpark\"/" /usr/local/share/jupyter/kernels/sparkmagic-pyspark/kernel.json || true
+  sudo sed -i "s/\"display_name\":\"PySpark3\"/\"display_name\":\"SparkMagic PySpark3\"/" /usr/local/share/jupyter/kernels/sparkmagic-pyspark3/kernel.json || true
 fi
 
 
