@@ -36,6 +36,7 @@ set -x -e
 # 2018-03-08 - Tom Zeng, upgrade Julia from 0.5 to 0.6.2, upgrade MXNet to the latest available version, upgrade Ruby to 2.5.0
 # 2018-03-09 - Tom Zeng, upgrade TensorFlow to 1.6, add SageMaker to --ml-packages
 # 2018-04-12 - Tom Zeng, fixed JupyterHub s3 storage, it works only with --s3fs, each user's notebooks are stored in s://<bucket>/<folder>/<user>
+# 2018-10-05 - Tom Zeng, changed * to 0.0.0.0 for c.NotebookApp.ip, * is no longer valid in Jupyter Notebook 5.7 https://github.com/jupyter/notebook/issues/3946
 
 
 #
@@ -324,6 +325,7 @@ if [ "$USE_CACHED_DEPS" = true ]; then
 else
   sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm libXt libX11-devel libXt-devel libcurl libcurl-devel git graphviz cyrus-sasl cyrus-sasl-devel readline readline-devel gnuplot
   sudo yum install --enablerepo=epel -y nodejs npm zeromq3 zeromq3-devel
+  sudo npm config set strict-ssl false
   sudo npm config set registry http://registry.npmjs.org/
   sudo yum install -y gcc-c++ patch zlib zlib-devel
   sudo  yum install -y libyaml-devel libffi-devel openssl-devel make
@@ -502,7 +504,7 @@ echo "c.NotebookApp.open_browser = False" >> ~/.jupyter/jupyter_notebook_config.
 
 if [ ! "$JUPYTER_LOCALHOST_ONLY" = true ]; then
 sed -i '/c.NotebookApp.ip/d' ~/.jupyter/jupyter_notebook_config.py
-echo "c.NotebookApp.ip='*'" >> ~/.jupyter/jupyter_notebook_config.py
+echo "c.NotebookApp.ip='0.0.0.0'" >> ~/.jupyter/jupyter_notebook_config.py
 fi
 
 sed -i '/c.NotebookApp.port/d' ~/.jupyter/jupyter_notebook_config.py
@@ -537,6 +539,7 @@ fi
 # install default kernels
 sudo python3 -m pip install $UPDATE_FLAG notebook ipykernel
 sudo python3 -m pip install tornado==4.5.3 # fix the latest tonardo and asyncio package conflict
+#sudo python3 -m pip install prompt-toolkit==1.0.15 # fix the prompt-toolkit and jupyter package conflict
 sudo python3 -m ipykernel install
 sudo python -m pip install $UPDATE_FLAG notebook ipykernel
 sudo python -m ipykernel install
