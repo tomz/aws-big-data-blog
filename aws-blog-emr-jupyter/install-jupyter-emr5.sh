@@ -37,7 +37,8 @@ set -x -e
 # 2018-03-09 - Tom Zeng, upgrade TensorFlow to 1.6, add SageMaker to --ml-packages
 # 2018-04-12 - Tom Zeng, fixed JupyterHub s3 storage, it works only with --s3fs, each user's notebooks are stored in s://<bucket>/<folder>/<user>
 # 2018-10-05 - Tom Zeng, changed * to 0.0.0.0 for c.NotebookApp.ip, * is no longer valid in Jupyter Notebook 5.7 https://github.com/jupyter/notebook/issues/3946
-
+# 2019-02-08 - Tom Zeng, fix the script for EMR 5.20.0; upgrade to tensorflow 1.12 and Julia to 1.1.0; add PyTorch(py3 for EMR 5.20, py2 for earlier versions); bigdl to 0.80
+# 2019-02-25 - Tom Zeng, fix the python 3.6 version check to work with minor versions
 
 #
 # Usage:
@@ -103,7 +104,7 @@ CPU_GPU="cpu"
 GPUU=""
 JUPYTER_HUB=true
 JUPYTER_HUB_PORT=8007
-JUPYTER_HUB_IP="*"
+JUPYTER_HUB_IP="0.0.0.0"
 JUPYTER_HUB_DEFAULT_USER="jupyter"
 INTERPRETERS="Scala,SQL,PySpark,SparkR"
 R_REPOS_LOCAL="file:////mnt/miniCRAN"
@@ -115,7 +116,7 @@ SSL_OPTS="--no-ssl"
 COPY_SAMPES=false
 USER_SPARK_OPTS=""
 NOTEBOOK_DIR_S3_S3NB=false
-NOTEBOOK_DIR_S3_S3CONTENTS=true
+NOTEBOOK_DIR_S3_S3CONTENTS=false
 JS_KERNEL=false
 NO_JUPYTER=false
 INSTALL_DASK=false
@@ -247,8 +248,10 @@ while [ $# -gt 0 ]; do
       APACHE_SPARK_VERSION=$1
       ;;
     --s3fs)
-      #NOTEBOOK_DIR_S3_S3NB=false
       NOTEBOOK_DIR_S3_S3CONTENTS=false
+      ;;
+    --s3contents)
+      NOTEBOOK_DIR_S3_S3CONTENTS=true
       ;;
     --use-sse)
       USE_SSE=true
@@ -277,7 +280,7 @@ sudo bash -c 'echo "* soft    nofile          1048576" >> /etc/security/limits.c
 sudo bash -c 'echo "* hard    nofile          1048576" >> /etc/security/limits.conf'
 sudo bash -c 'echo "session    required   pam_limits.so" >> /etc/pam.d/su'
 
-sudo puppet module install spantree-upstart
+sudo puppet module install spantree-upstart --ignore-dependencies
 
 RELEASE=$(cat /etc/system-release)
 REL_NUM=$(ruby -e "puts '$RELEASE'.split.last")
@@ -300,37 +303,45 @@ if [ "$R_REPOS" = "$R_REPOS_LOCAL" ]; then
   rm miniCRAN.zip
 fi
 
-sudo mkdir -p /mnt/var/aws/emr
-sudo cp -pr /var/aws/emr/packages /mnt/var/aws/emr/ && sudo rm -rf /var/aws/emr/packages && sudo mkdir /var/aws/emr/packages && sudo mount -o bind /mnt/var/aws/emr/packages /var/aws/emr/packages &
+#sudo mkdir -p /mnt/var/aws/emr
+#sudo cp -pr /var/aws/emr/packages /mnt/var/aws/emr/ && sudo rm -rf /var/aws/emr/packages && sudo mkdir /var/aws/emr/packages && sudo mount -o bind /mnt/var/aws/emr/packages /var/aws/emr/packages &
 
 # move /usr/local and usr/share to /mnt/usr-moved/ to avoid running out of space on /
-if [ ! -d /mnt/usr-moved ]; then
-  echo "move local start" >> /tmp/install_time.log
-  date >> /tmp/install_time.log
-  sudo mkdir /mnt/usr-moved
-  sudo mv /usr/local /mnt/usr-moved/ && sudo ln -s /mnt/usr-moved/local /usr/
-  echo "move local end, move share start" >> /tmp/install_time.log
-  date >> /tmp/install_time.log
-  sudo mv /usr/share /mnt/usr-moved/ && sudo ln -s /mnt/usr-moved/share /usr/
-  echo "move share end" >> /tmp/install_time.log
-  date >> /tmp/install_time.log
-fi
+#if [ ! -d /mnt/usr-moved ]; then
+#  echo "move local start" >> /tmp/install_time.log
+#  date >> /tmp/install_time.log
+#  sudo mkdir /mnt/usr-moved
+#  sudo mv /usr/local /mnt/usr-moved/ && sudo ln -s /mnt/usr-moved/local /usr/
+#  echo "move local end, move share start" >> /tmp/install_time.log
+#  date >> /tmp/install_time.log
+#  sudo mv /usr/share /mnt/usr-moved/ && sudo ln -s /mnt/usr-moved/share /usr/
+#  echo "move share end" >> /tmp/install_time.log
+#  date >> /tmp/install_time.log
+#fi
 
 export MAKE="make -j $NPROC"
 
-sudo yum remove -y kernel-4.9.27-14.31.amzn1.x86_64 # EMR 5.6
+sudo sed -i 's/#baseurl/baseurl/g' /etc/yum.repos.d/epel.repo
+sudo sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/epel.repo
+
+sudo yum remove -y kernel-4.9.27-14.31.amzn1.x86_64 || true # EMR 5.6
 if [ "$USE_CACHED_DEPS" = true ]; then
   sudo yum install -y libcurl-devel # workaround for EMR 5.9 until libcurl cache is fixed
   sudo yum install --skip-broken -y /mnt/yum-rpm-cache/*
 else
-  sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm libXt libX11-devel libXt-devel libcurl libcurl-devel git graphviz cyrus-sasl cyrus-sasl-devel readline readline-devel gnuplot
-  sudo yum install --enablerepo=epel -y nodejs npm zeromq3 zeromq3-devel
+  sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm libXt libX11-devel libXt-devel libcurl libcurl-devel git graphviz cyrus-sasl cyrus-sasl-devel readline readline-devel gnuplot || true
+  curl --silent --location https://rpm.nodesource.com/setup_10.x | sudo -E bash -
+  sudo yum install -y nodejs
+  sudo yum install --enablerepo=epel -y zeromq3 zeromq3-devel || true
   sudo npm config set strict-ssl false
   sudo npm config set registry http://registry.npmjs.org/
-  sudo yum install -y gcc-c++ patch zlib zlib-devel
-  sudo  yum install -y libyaml-devel libffi-devel openssl-devel make
-  sudo yum install -y bzip2 autoconf automake libtool bison iconv-devel sqlite-devel
+  sudo yum install -y gcc-c++ patch zlib zlib-devel || true
+  sudo yum install -y libyaml-devel libffi-devel openssl-devel make || true
+  sudo yum install -y bzip2 autoconf automake libtool bison iconv-devel sqlite-devel || true
 fi
+
+sudo sed -i 's/baseurl/#baseurl/g' /etc/yum.repos.d/epel.repo
+sudo sed -i 's/#mirrorlist/mirrorlist/g' /etc/yum.repos.d/epel.repo
 
 cd /mnt
 PYTHON3=false
@@ -345,10 +356,14 @@ if [ "$PYTHON3" = true ]; then # this will break bigtop/puppet which relies on p
   fi
 else
   sudo python -m pip install --upgrade pip
+  sudo python -m pip install awscli -U
   if [ -f /usr/bin/pip-2.7 ]; then
     sudo ln -sf /usr/bin/pip-2.7 /usr/bin/pip
   fi
 fi
+
+sudo python3 -m pip install --upgrade pip
+
 
 export NODE_PATH='/usr/lib/node_modules'
 if [ "$JS_KERNEL" = true ]; then
@@ -360,9 +375,18 @@ if [ "$JS_KERNEL" = true ]; then
   #sudo n stable
 fi
 
-TF_BINARY_URL_PY3="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.6.0-cp34-cp34m-linux_x86_64.whl"
-TF_BINARY_URL="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.6.0-cp27-none-linux_x86_64.whl"
+py3ver=$(python3 -c 'import platform; print(platform.python_version())')
+if [[ "$py3ver" =~ ^"3.6" ]]; then
+  TF_BINARY_URL_PY3="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.12.0-cp36-cp36m-linux_x86_64.whl"
+else
+  TF_BINARY_URL_PY3="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.12.0-cp34-cp34m-linux_x86_64.whl"
+fi
 
+TF_BINARY_URL="https://storage.googleapis.com/tensorflow/linux/$CPU_GPU/tensorflow$GPUU-1.12.0-cp27-none-linux_x86_64.whl"
+
+
+sudo python3 -m pip install prompt-toolkit==1.0.15 # fix the prompt-toolkit and jupyter package conflict
+sudo python -m pip install prompt-toolkit==1.0.15 # fix the prompt-toolkit and jupyter package conflict
 sudo python3 -m pip install jupyter
 sudo ln -sf /usr/local/bin/ipython /usr/bin/
 sudo ln -sf /usr/local/bin/jupyter /usr/bin/
@@ -392,18 +416,18 @@ fi
 if [ "$ML_PACKAGES" = true ]; then
   if [ "$INSTALL_PY3_PKGS" = true ]; then
     sudo python3 -m pip install mxnet sagemaker
-    sudo python3 -m pip install $TF_BINARY_URL_PY3
+    sudo python3 -m pip install $TF_BINARY_URL_PY3 || true
     sudo python3 -m pip install theano
     sudo python3 -m pip install keras
     sudo python3 -m pip install xgboost lightgbm opencv-python
-    #sudo python3 -m pip install pytorch # pytorch taking too long to setup, skip it for now
+    sudo python3 -m pip install torch torchvision || true # pytorch does not support python 3.4
   else
     sudo python -m pip install mxnet sagemaker
     sudo python -m pip install $TF_BINARY_URL
     sudo python -m pip install theano
     sudo python -m pip install keras
     sudo python -m pip install xgboost lightgbm opencv-python
-    #sudo python3 -m pip install pytorch # pytorch taking too long to setup, skip it for now
+    sudo python -m pip install torch torchvision # pytorch taking too long to setup, skip it for now
   fi
 fi
 
@@ -425,10 +449,10 @@ if [ "$BIGDL" = true ]; then
   cd BigDL/
   export MAVEN_OPTS="-Xmx2g -XX:ReservedCodeCacheSize=512m"
   export BIGDL_HOME=/mnt/BigDL
-  export BIGDL_VER="0.6.0-SNAPSHOT"
+  export BIGDL_VER="0.8.0-SNAPSHOT"
   bash make-dist.sh -P spark_2.x,scala_2.11
   mkdir /tmp/bigdl_summaries
-  /usr/local/bin/tensorboard --debug INFO --logdir /tmp/bigdl_summaries/ > /tmp/tensorboard_bigdl.log 2>&1 &
+  /usr/local/bin/tensorboard --logdir /tmp/bigdl_summaries/ > /tmp/tensorboard_bigdl.log 2>&1 &
 fi
 
 if [ "$JULIA_KERNEL" = true ]; then
@@ -438,14 +462,17 @@ if [ "$JULIA_KERNEL" = true ]; then
     #wget https://julialang.s3.amazonaws.com/bin/linux/x64/0.5/julia-0.5.0-linux-x86_64.tar.gz # julia-3c9d75391c
     #wget https://julialang-s3.julialang.org/bin/linux/x64/0.6/julia-0.6.1-linux-x86_64.tar.gz # julia-0d7248e2ff
     #wget https://julialang-s3.julialang.org/bin/linux/x64/0.6/julia-0.6.2-linux-x86_64.tar.gz  # julia-d386e40c17
-    aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/julia-0.6.2-linux-x86_64.tar.gz .
+    #aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/julia-0.6.2-linux-x86_64.tar.gz .
+    wget https://julialang-s3.julialang.org/bin/linux/x64/1.1/julia-1.1.0-linux-x86_64.tar.gz
     #tar xvfz julia-0.5.0-linux-x86_64.tar.gz
     #tar xvfz julia-0.6.1-linux-x86_64.tar.gz
-    tar xvfz julia-0.6.2-linux-x86_64.tar.gz
+    #tar xvfz julia-0.6.2-linux-x86_64.tar.gz
+    tar xvfz julia-1.1.0-linux-x86_64.tar.gz
   fi
   #cd julia-3c9d75391c
   #cd julia-0d7248e2ff
-  cd julia-d386e40c17
+  #cd julia-d386e40c17
+  cd julia-1.1.0
   sudo cp -pr bin/* /usr/bin/
   sudo cp -pr lib/* /usr/lib/
   #sudo cp -pr libexec/* /usr/libexec/
@@ -539,7 +566,6 @@ fi
 # install default kernels
 sudo python3 -m pip install $UPDATE_FLAG notebook ipykernel
 sudo python3 -m pip install tornado==4.5.3 # fix the latest tonardo and asyncio package conflict
-#sudo python3 -m pip install prompt-toolkit==1.0.15 # fix the prompt-toolkit and jupyter package conflict
 sudo python3 -m ipykernel install
 sudo python -m pip install $UPDATE_FLAG notebook ipykernel
 sudo python -m ipykernel install
@@ -572,8 +598,8 @@ sudo python -m pip install gvmagic py_d3
 sudo python -m pip install ipython-sql
 
 if [ "$JULIA_KERNEL" = true ]; then
-  julia -e 'Pkg.add("IJulia")'
-  julia -e 'Pkg.add("RDatasets");Pkg.add("Gadfly");Pkg.add("DataFrames");Pkg.add("PyPlot")'
+  julia -e 'using Pkg; Pkg.add("IJulia")'
+  julia -e 'using Pkg; Pkg.add("RDatasets");Pkg.add("Gadfly");Pkg.add("DataFrames");Pkg.add("PyPlot")'
   # Julia's Spark support does not support Spark on Yarn yet
   # install mvn
   #cd /mnt
@@ -614,8 +640,14 @@ fi
 
 if [ "$R_KERNEL" = true ] || [ "$TOREE_KERNEL" = true ]; then
   sudo yum install -y R-devel readline-dev
-  aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/rpy2-2.8.6.tar.gz /mnt/
-  sudo python -m pip install /mnt/rpy2-2.8.6.tar.gz
+  #aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/rpy2-2.8.6.tar.gz /mnt/
+  #sudo python -m pip install /mnt/rpy2-2.8.6.tar.gz
+  sudo ln -s /usr/lib/gcc/x86_64-amazon-linux/6.4.1/libgomp.spec /usr/lib64/libgomp.spec || true
+  sudo ln -s /usr/lib/gcc/x86_64-amazon-linux/6.4.1/libgomp.a /usr/lib64/libgomp.a || true
+  sudo ln -s /usr/lib64/libgomp.so.1.0.0 /usr/lib64/libgomp.so || true
+  
+  sudo python3 -m pip install rpy2
+  sudo python -m pip install rpy2==2.8.6
 
   if [ ! -f /tmp/Renvextra ]; then # check if the rstudio ba was run, it does this already 
    sudo sed -i "s/make/make -j $NPROC/g" /usr/lib64/R/etc/Renviron
@@ -672,9 +704,10 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
       cd /mnt
       #aws s3 cp s3://aws-bigdata-blog/artifacts/aws-blog-emr-jupyter/s3contents.zip .
       #unzip s3contents.zip
-      git clone https://github.com/tomz/s3contents.git
+      git clone https://github.com/danielfrg/s3contents.git
+      #git clone https://github.com/tomz/s3contents.git
       cd s3contents
-      sudo python setup.py install
+      sudo python3 setup.py install
       echo "c.NotebookApp.contents_manager_class = 's3contents.S3ContentsManager'" >> ~/.jupyter/jupyter_notebook_config.py
       echo "c.S3ContentsManager.bucket_name = '$BUCKET'" >> ~/.jupyter/jupyter_notebook_config.py
       echo "c.S3ContentsManager.prefix = '$FOLDER'" >> ~/.jupyter/jupyter_notebook_config.py
